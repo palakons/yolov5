@@ -113,8 +113,10 @@ def run(
 
     results = []
     paths= []
+    confs =  []
     for path, im, im0s, vid_cap, s in dataset:
         result_per_image =[]
+        conf_per_image=[]
         t1 = time_sync()
         im = torch.from_numpy(im).to(device)
         im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
@@ -158,13 +160,17 @@ def run(
                 det[:, :4] = scale_coords(im.shape[2:], det[:, :4], im0.shape).round()
 
                 # Print results
+                    # conf_per_image.append(conf)
                 for c in det[:, -1].unique():
                     n = (det[:, -1] == c).sum()  # detections per class
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
                     result_per_image.append(names[int(c)])
+                    # conf_per_image.append(conf)
 
                 # Write results
                 for *xyxy, conf, cls in reversed(det):
+
+                    conf_per_image.append({'confidence':conf,'class':names[int(cls)]})
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
@@ -205,6 +211,8 @@ def run(
                 # print('save_path',save_path)
                 paths.append(save_path)
         results.append(result_per_image)
+        confs.append(conf_per_image)
+    # print(json.dumps({'res':results,'confidence':confs,'paths':paths}))
     print(json.dumps({'res':results,'paths':paths}))
         # Print time (inference-only)
         # LOGGER.info(f'{s}Done. ({t3 - t2:.3f}s)')
